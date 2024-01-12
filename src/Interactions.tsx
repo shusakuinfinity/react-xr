@@ -215,7 +215,7 @@ export const Interactive = React.forwardRef<THREE.Group, InteractiveProps>(funct
   return <group ref={ref}>{children}</group>
 })
 
-export interface RayGrabProps extends InteractiveProps {}
+export interface RayGrabProps extends InteractiveProps { }
 export const RayGrab = React.forwardRef<THREE.Group, RayGrabProps>(function RayGrab(
   { onSelectStart, onSelectEnd, children, ...rest },
   forwardedRef
@@ -225,17 +225,42 @@ export const RayGrab = React.forwardRef<THREE.Group, RayGrabProps>(function RayG
   const previousTransform = React.useMemo(() => new THREE.Matrix4(), [])
   React.useImperativeHandle(forwardedRef, () => groupRef.current)
 
+  /* Original Version */
+  // useFrame(() => {
+  //   const controller = grabbingController.current
+  //   const group = groupRef.current
+  //   if (!controller) return
+
+  //   group.applyMatrix4(previousTransform)
+  //   group.applyMatrix4(controller.matrixWorld)
+  //   group.updateMatrixWorld()
+
+  //   previousTransform.copy(controller.matrixWorld).invert()
+  // })
+
   useFrame(() => {
-    const controller = grabbingController.current
-    const group = groupRef.current
-    if (!controller) return
+    const controller = grabbingController.current;
+    const group = groupRef.current;
 
-    group.applyMatrix4(previousTransform)
-    group.applyMatrix4(controller.matrixWorld)
-    group.updateMatrixWorld()
+    if (!controller) return;
 
-    previousTransform.copy(controller.matrixWorld).invert()
-  })
+    group.applyMatrix4(previousTransform);
+    group.applyMatrix4(controller.matrixWorld);
+    group.updateMatrixWorld();
+
+    // Get the position from the world matrix
+    const position = new THREE.Vector3();
+    group.matrixWorld.decompose(position, new THREE.Quaternion(), new THREE.Vector3());
+
+    // Restrict movement to the horizontal plane
+    group.position.set(position.x, 0, position.z);
+
+    // Update matrix world
+    group.updateMatrixWorld();
+
+    // Update previous transform
+    previousTransform.copy(controller.matrixWorld).invert();
+  });
 
   return (
     <Interactive
